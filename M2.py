@@ -21,7 +21,6 @@ class M2:
             if totalerrorlist[i] < totalerrorlist[lowest]:
                 lowest = i
         rulelist = rulelist[:(lowest+1)]
-
         self.defaultclass = self.defaultclasslist[lowest]
         self.defaultclasslist = None
         self.totalerrorlist = None
@@ -61,11 +60,11 @@ def allCoverRules(U,datacase,cRule_i,cars):
 
 # how many cases that this rule classified wrongly
 
-def errorsOfRule(r, dataset):
+def errorsOfRule(r, dataset,dataCaseCovered):
     error_number = 0
-    for case in dataset:
-        if case:
-            if isCorrect(case,r) and isRuleInDataCase(case,r):
+    for counter,case in enumerate(dataset):
+        if counter not in dataCaseCovered:
+            if not isCorrect(case,r) and isRuleInDataCase(case,r):
                 error_number += 1
     return error_number
 
@@ -73,7 +72,7 @@ def compClassDistr(dataset,dataCaseCovered):
     class_distr=dict()
     for index,datacase in enumerate(dataset):
         if index not in dataCaseCovered:
-            if datacase[-1] in class_distr:
+            if datacase[-1] not in class_distr:
                 class_distr[datacase[-1]]=1
             else:
                 class_distr[datacase[-1]]+=1
@@ -123,7 +122,6 @@ def M2_classifier(CARs,dataset):
                 marked.add(cRule_index)
             else:
                 A.add(id,d[-1],cRule_index,wRule_index)
-        ##????????no more alr ?????
     
     # stage 2
     for entry in A:
@@ -136,6 +134,9 @@ def M2_classifier(CARs,dataset):
                 CARs[w].replace.add((entry[2], entry[0], entry[1]))
                 CARs[w].classCasesCovered[entry[1]] += 1
             Q=Q.union(wSet)
+
+
+    # stage 3
     ruleErrors=0
     ordered_Q=sorted(list(set))
     data_cases_covered=set() 
