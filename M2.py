@@ -1,5 +1,7 @@
 
 import sys
+import ruleItem
+import RG
 
 class M2:
 
@@ -24,6 +26,10 @@ class M2:
         self.defaultclass = self.defaultclasslist[lowest]
         self.defaultclasslist = None
         self.totalerrorlist = None
+    def print(self):
+        for rule in self.rule_list:
+            rule.print()
+        print("default_class:", self.default_class)
     
 
 def isRuleInDataCase(datacase,rule):
@@ -35,7 +41,7 @@ def isRuleInDataCase(datacase,rule):
 def isCorrect(datacase,rule):
     # assumption: rule must be in datacase first 
     # return if the rule correctly classify the datacase d.
-    if datacase[-1]==rule.class_label:
+    if datacase[-1]==rule.classLabel:
         return True
     else:
         return False
@@ -142,7 +148,7 @@ def M2_classifier(CARs,dataset):
     data_cases_covered=set() 
 
     for r_index in ordered_Q:
-        if (CARs[r_index].classCasesCovered[CARs[r_index].class_label]!=0):
+        if (CARs[r_index].classCasesCovered[CARs[r_index].classLabel]!=0):
             for entry in CARs[r_index].replace:
                 if entry[1] in data_cases_covered:
                     CARs[r_index].classCasesCovered[entry[2]] -= 1
@@ -161,6 +167,21 @@ def M2_classifier(CARs,dataset):
         classifier.add(CARs[r_index],default_class,totolErrors)
     classifier.discard()
     return classifier    
+
+
+if (__name__=="__main__"):
+
+    dataset = [[1, 1, 1], [1, 1, 1], [1, 2, 1], [2, 2, 1], [2, 2, 1],
+               [2, 2, 0], [2, 3, 0], [2, 3, 0], [1, 1, 0], [3, 2, 0]]
+    minsup = 0.15
+    minconf = 0.6
+    cars=RG.rule_generator(dataset,minsup,minconf)
+    classifier=M2_classifier(cars,dataset)
+    classifier.print()
+
+
+
+
 
 
 
