@@ -67,7 +67,7 @@ class RuleItem:
         print(self.__repre__)
 
     # print out rule
-    def print_rule(self):
+    def printRule(self):
         output = ''
         for item in self.condSet:
             output += '(' + str(item) + ', ' + str(self.condSet[item]) + '), '
