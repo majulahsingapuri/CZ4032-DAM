@@ -20,14 +20,16 @@ class M2:
     def discard(self):
         lowest = self.totalerrorlist.index(min(self.totalerrorlist))
         self.rulelist = self.rulelist[:(lowest+1)]
-        print(self.defaultclasslist)
+        #print("default class list ", self.defaultclasslist) #debug
         self.defaultclass = self.defaultclasslist[lowest]
         self.defaultclasslist = None
         self.totalerrorlist = None
+
+    #print out rules and default class label
     def print(self):
         for rule in self.rulelist:
             rule.printRule()
-        print("default_class:", self.defaultclass)
+        print("default_class:", self.defaultclass) 
     
 
 def isRuleInDataCase(datacase,rule):
@@ -57,9 +59,9 @@ def highestPrecedenceRule_wrong(cars,datacase):
 def allCoverRules(U,datacase,cRule_i,cars):
     wSet=set()
     for rule_i in U:
-        cars[rule_i].print()
+        #cars[rule_i].print() #debug
         if cars[rule_i]>cRule_i and cars[rule_i]!=cRule_i:
-            print(rule_i)
+            #print(rule_i) #debug
             if isRuleInDataCase(datacase,cars[rule_i]) and not isCorrect(datacase,cars[rule_i]):
                 wSet.add(rule_i)
     return wSet
@@ -73,6 +75,7 @@ def errorsOfRule(r, dataset,dataCaseCovered):
         if counter not in dataCaseCovered:
             if not isCorrect(case,r) and isRuleInDataCase(case,r):
                 error_number += 1
+    #print("error number: ", error_number) #debug 
     return error_number
 
 def compClassDistr(dataset,dataCaseCovered):
@@ -83,6 +86,9 @@ def compClassDistr(dataset,dataCaseCovered):
                 class_distr[datacase[-1]]=1
             else:
                 class_distr[datacase[-1]]+=1
+    #print("class distr: ", class_distr) #debug clear
+    return class_distr
+
 
 # choose the default class (majority class in remaining dataset)
 def selectDefault(classDistribution):
@@ -111,14 +117,17 @@ def defErr(defaultClass, classDistr):
 def M2_classifier(CARs,dataset):
     classifier = M2()
     rule_list=list(CARs.rules)
-    for rule in rule_list:
-        rule.print()
+    
+    #for rule in rule_list: #debug
+     #   rule.print()
+
     for i in range(len(rule_list)):
         rule_list[i]=ruleitem2rule(rule_list[i],dataset)
-    print(" ")
+    #print(" ") 
     rule_list.sort()
-    for rule in rule_list:
-        rule.print()
+    #for rule in rule_list:
+     #   rule.print()
+
     isSatisfy=[]
     # highest precedence in front
     #Stage 1
@@ -129,7 +138,7 @@ def M2_classifier(CARs,dataset):
     for id, d in enumerate(dataset):
         cRule_index=highestPrecedenceRule_correct(rule_list,d)
         wRule_index=highestPrecedenceRule_wrong(rule_list,d)
-        print(wRule_index)
+        #print("wRule index", wRule_index) #debug
         if cRule_index is not None:           # one bug here, 0 also count 
             U.add(cRule_index)
         if cRule_index:
@@ -142,16 +151,16 @@ def M2_classifier(CARs,dataset):
                 A.add((id,d[-1],cRule_index,wRule_index))
         if cRule_index is None and wRule_index is not None:
             A.add((id,d[-1],cRule_index,wRule_index))
-        
-
+    '''
+    #debug
     print("before stageb2")
-    print(Q)
-    print(U)
-    print(A)
-
+    print("Q set: ", Q)
+    print("U set: ", U)
+    print("A set: ", A)
+'''
     # stage 2
     for entry in A:
-        print(entry[2])
+        #print(entry[2]) #debug
         if rule_list[entry[3]] in marked:
             if entry[2] is not None:
                 rule_list[entry[2]].classCasesCovered[entry[1]] -= 1
@@ -159,27 +168,28 @@ def M2_classifier(CARs,dataset):
         else:
             if entry[2] is not None:
                 wSet=allCoverRules(U, dataset[entry[0]], rule_list[entry[2]], rule_list)
-
-
             else:
                 wSet=allCoverRules(U, dataset[entry[0]], None, rule_list)
-                print("w set")
-                print(wSet)
+            #print("w set ", wSet) #debug
             for w in wSet:
                 rule_list[w].replace.add((entry[2], entry[0], entry[1]))
                 rule_list[w].classCasesCovered[entry[1]] += 1
 
             Q=Q.union(wSet)
+    '''
+    #debug
     print("before stageb3")
-    print(Q)
-    print(U)
-    print(A)
+    print("Q set: ", Q)
+    print("U set: ", U)
+    print("A set: ", A)
+    '''
     # stage 3
 
 
     ## lots of errors below 
     ruleErrors=0
     ordered_Q=sorted(list(Q))
+    #print("ordered Q: ", ordered_Q) #debug clear
     data_cases_covered=set() 
     for r_index in ordered_Q:
         if (rule_list[r_index].classCasesCovered[rule_list[r_index].classLabel]!=0):
@@ -192,14 +202,16 @@ def M2_classifier(CARs,dataset):
             if i not in data_cases_covered:
                 if isCorrect(dataset[i],rule_list[r_index]) and isRuleInDataCase(dataset[i],rule_list[r_index]):
                     data_cases_covered.add(i)
+        #print("data case covered: ", data_cases_covered) #debug
                     
         ruleErrors+=(errorsOfRule(rule_list[r_index],dataset,data_cases_covered))
+        #print(ruleErrors) #debug clear
         class_distribution=compClassDistr(dataset,data_cases_covered)
         default_class=selectDefault(class_distribution)
         defaultErrors=defErr(default_class, class_distribution)
         totolErrors=ruleErrors+defaultErrors
         classifier.add(rule_list[r_index],default_class,totolErrors)
-    print(data_cases_covered)
+    #print(data_cases_covered) #debug
     classifier.discard()
     return classifier    
 
@@ -252,7 +264,14 @@ if (__name__=="__main__"):
     classifier=M2_classifier(cars,dataset)
     classifier.print()
 
-
+    print("---------------------------------------")
+    dataset = [[1, 1, 1], [1, 1, 1], [1, 2, 1], [2, 2, 1], [2, 2, 1],
+               [2, 2, 0], [2, 3, 0], [2, 3, 0], [1, 1, 0], [3, 2, 0]]
+    cars=RG.rule_generator(dataset,minsup,minconf)
+    cars.pruneRules(dataset)
+    cars.rules = cars.prunedRules
+    classifier = M2_classifier(cars, dataset)
+    classifier.print()
 
 
 

@@ -64,11 +64,14 @@ class CAR:
     def genRules(self, frequentRuleItems, minsup, minConf):
         for item in frequentRuleItems.frequentRuleItemSet:
             self._add(item, minsup, minConf)
+            #print("item added: ", item.print()) #debug
 
     # prune rules
     def pruneRules(self, dataset):
         for rule in self.rules:
+
             prunedRule = prune(rule, dataset)
+            #print("rule: ", rule.print()) #debug
 
             exists = False
             for rule in self.prunedRules:
@@ -85,6 +88,14 @@ class CAR:
         for item in car.rules:
             self._add(item, minsup, minConf)
 
+def is_satisfy(datacase, rule):
+    for item in rule.condSet:
+        if datacase[item] != rule.condSet[item]:
+            return None
+    if datacase[-1] == rule.classLabel:
+        return True
+    else:
+        return False
 
 # try to prune rule
 def prune(rule, dataset):
@@ -96,15 +107,6 @@ def prune(rule, dataset):
     def findPruneRule(thisRule):
         nonlocal minRuleError
         nonlocal prunedRule
-        def is_satisfy(datacase, rule):
-            for item in rule.condSet:
-                if datacase[item] != rule.condSet[item]:
-                    return None
-            if datacase[-1] == rule.classLabel:
-                return True
-            else:
-                return False
-
         # calculate how many errors the rule r make in the dataset
         def ruleError(r):
             errors = 0
@@ -113,9 +115,9 @@ def prune(rule, dataset):
                     errors += 1
             return errors
 
-        ruleError = ruleError(thisRule)
-        if ruleError < minRuleError:
-            minRuleError = ruleError
+        ruleErrors = ruleError(thisRule)
+        if ruleErrors < minRuleError:
+            minRuleError = ruleErrors
             prunedRule = thisRule
         thisRuleCondSet = list(thisRule.condSet)
         if len(thisRuleCondSet) >= 2:
@@ -124,6 +126,7 @@ def prune(rule, dataset):
                 tempCondSet.pop(attribute)
                 tempRule = RuleItem(tempCondSet, thisRule.classLabel, dataset)
                 tempRuleError = ruleError(tempRule)
+                #print("temp rule: ", tempRuleError) #debug
                 if tempRuleError <= minRuleError:
                     minRuleError = tempRuleError
                     prunedRule = tempRule
@@ -185,11 +188,15 @@ def rule_generator(dataset, minsup, minConf):
                 ruleItem = RuleItem(condSet, classes, dataset)
                 if ruleItem.support >= minsup:
                     frequentRuleItems.add(ruleItem)
+                    #print(ruleItem.print()) #debug
+                    #frequentRuleItems.print() #debug
+                    #print()
     car.genRules(frequentRuleItems, minsup, minConf)
     cars = car
 
     lastCARsNumber = 0
     currentCARsNumber = len(cars.rules)
+    #print("Frequent rule items: ", frequentRuleItems.print()) #debug
     while frequentRuleItems.getSize() > 0 and currentCARsNumber <= 2000 and \
                     (currentCARsNumber - lastCARsNumber) >= 10:
         candidate = candidateGenerator(frequentRuleItems, dataset)
@@ -198,9 +205,26 @@ def rule_generator(dataset, minsup, minConf):
         for item in candidate.frequentRuleItemSet:
             if item.support >= minsup:
                 frequentRuleItems.add(item)
+
         car.genRules(frequentRuleItems, minsup, minConf)
         cars.append(car, minsup, minConf)
         lastCARsNumber = currentCARsNumber
         currentCARsNumber = len(cars.rules)
 
     return cars
+
+# just for test
+if __name__ == "__main__":
+    dataset = [[1, 1, 1], [1, 1, 1], [1, 2, 1], [2, 2, 1], [2, 2, 1],
+               [2, 2, 0], [2, 3, 0], [2, 3, 0], [1, 1, 0], [3, 2, 0]]
+    minsup = 0.15
+    minconf = 0.6
+    cars = rule_generator(dataset, minsup, minconf)
+
+    print("CARs:")
+    cars.printRule()
+
+    print("prCARs:")
+    cars.pruneRules(dataset)
+    cars.printPrunedRules()
+
