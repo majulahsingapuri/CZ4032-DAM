@@ -52,21 +52,17 @@ class RuleItem:
             return True
         return False
     '''
-    def __repre__(self):
+    def print(self):
         output = ''
         for item in self.condSet:
             output += '(' + str(item) + ', ' + str(self.condSet[item]) + '), '
         output = output[:-2]
-        return '<({' + output + '}, ' + str(self.condSupportCount) + '), (' + '(class, ' + str(self.classLabel) + '), ' + str(self.ruleSupportCount) + ')>'
+        print( '<({' + output + '}, ' + str(self.condSupportCount) + '), (' + '(class, ' + str(self.classLabel) + '), ' + str(self.ruleSupportCount) + ')>')
 
 
         
 
 
-
-    # print out the ruleitem
-    def print(self):
-        print(self.__repre__)
 
     # print out rule
     def printRule(self):

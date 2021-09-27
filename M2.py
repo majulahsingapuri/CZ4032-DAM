@@ -20,12 +20,13 @@ class M2:
     def discard(self):
         lowest = self.totalerrorlist.index(min(self.totalerrorlist))
         self.rulelist = self.rulelist[:(lowest+1)]
+        print(self.defaultclasslist)
         self.defaultclass = self.defaultclasslist[lowest]
         self.defaultclasslist = None
         self.totalerrorlist = None
     def print(self):
         for rule in self.rulelist:
-            rule.print()
+            rule.printRule()
         print("default_class:", self.defaultclass)
     
 
@@ -56,8 +57,11 @@ def highestPrecedenceRule_wrong(cars,datacase):
 def allCoverRules(U,datacase,cRule_i,cars):
     wSet=set()
     for rule_i in U:
-        if cars[rule_i]>cRule_i and isRuleInDataCase(datacase,cars[rule_i]) and not isCorrect(datacase,cars[rule_i]):
-            wSet.add(rule_i)
+        cars[rule_i].print()
+        if cars[rule_i]>cRule_i and cars[rule_i]!=cRule_i:
+            print(rule_i)
+            if isRuleInDataCase(datacase,cars[rule_i]) and not isCorrect(datacase,cars[rule_i]):
+                wSet.add(rule_i)
     return wSet
 
 
@@ -107,9 +111,15 @@ def defErr(defaultClass, classDistr):
 def M2_classifier(CARs,dataset):
     classifier = M2()
     rule_list=list(CARs.rules)
+    for rule in rule_list:
+        rule.print()
     for i in range(len(rule_list)):
         rule_list[i]=ruleitem2rule(rule_list[i],dataset)
-    sorted(rule_list)
+    print(" ")
+    rule_list.sort()
+    for rule in rule_list:
+        rule.print()
+    isSatisfy=[]
     # highest precedence in front
     #Stage 1
     Q = set() # set of all cRules
@@ -119,52 +129,77 @@ def M2_classifier(CARs,dataset):
     for id, d in enumerate(dataset):
         cRule_index=highestPrecedenceRule_correct(rule_list,d)
         wRule_index=highestPrecedenceRule_wrong(rule_list,d)
-        if cRule_index:
+        print(wRule_index)
+        if cRule_index is not None:           # one bug here, 0 also count 
             U.add(cRule_index)
+        if cRule_index:
             rule_list[cRule_index].classCasesCovered[dataset[id][-1]] += 1
-        if (cRule_index and wRule_index):    # if both are found
-            if (rule_list[cRule_index]>rule_list[wRule_index]):
+        if (cRule_index and wRule_index ):    # if both are found
+            if (rule_list[cRule_index]>rule_list[wRule_index] and rule_list[cRule_index]!=rule_list[wRule_index]):
                 Q.add(cRule_index)
                 marked.add(cRule_index)
             else:
                 A.add((id,d[-1],cRule_index,wRule_index))
-    
+        if cRule_index is None and wRule_index is not None:
+            A.add((id,d[-1],cRule_index,wRule_index))
+        
+
+    print("before stageb2")
+    print(Q)
+    print(U)
+    print(A)
+
     # stage 2
     for entry in A:
+        print(entry[2])
         if rule_list[entry[3]] in marked:
-            rule_list[entry[2]].classCasesCovered[entry[1]] -= 1
+            if entry[2] is not None:
+                rule_list[entry[2]].classCasesCovered[entry[1]] -= 1
             rule_list[entry[3]].classCasesCovered[entry[1]] += 1
         else:
-            wSet=allCoverRules(U, dataset[entry[0]], rule_list[entry[2]], rule_list)
+            if entry[2] is not None:
+                wSet=allCoverRules(U, dataset[entry[0]], rule_list[entry[2]], rule_list)
+
+
+            else:
+                wSet=allCoverRules(U, dataset[entry[0]], None, rule_list)
+                print("w set")
+                print(wSet)
             for w in wSet:
                 rule_list[w].replace.add((entry[2], entry[0], entry[1]))
                 rule_list[w].classCasesCovered[entry[1]] += 1
+
             Q=Q.union(wSet)
-
-
+    print("before stageb3")
+    print(Q)
+    print(U)
+    print(A)
     # stage 3
+
+
+    ## lots of errors below 
     ruleErrors=0
     ordered_Q=sorted(list(Q))
     data_cases_covered=set() 
-
     for r_index in ordered_Q:
         if (rule_list[r_index].classCasesCovered[rule_list[r_index].classLabel]!=0):
             for entry in rule_list[r_index].replace:
                 if entry[1] in data_cases_covered:
                     rule_list[r_index].classCasesCovered[entry[2]] -= 1
-                else:
+                elif entry[0] is not None:
                     rule_list[entry[0]].classCasesCovered[entry[2]] -= 1
         for i in range(len(dataset)):
             if i not in data_cases_covered:
                 if isCorrect(dataset[i],rule_list[r_index]) and isRuleInDataCase(dataset[i],rule_list[r_index]):
                     data_cases_covered.add(i)
                     
-        ruleErrors+=(errorsOfRule(rule_list[r_index,],dataset))
+        ruleErrors+=(errorsOfRule(rule_list[r_index],dataset,data_cases_covered))
         class_distribution=compClassDistr(dataset,data_cases_covered)
         default_class=selectDefault(class_distribution)
         defaultErrors=defErr(default_class, class_distribution)
         totolErrors=ruleErrors+defaultErrors
         classifier.add(rule_list[r_index],default_class,totolErrors)
+    print(data_cases_covered)
     classifier.discard()
     return classifier    
 
@@ -187,12 +222,18 @@ class Rule(ruleItem.RuleItem):
         if (other==None):
             return True
         if (self.confidence>other.confidence):
-            return True
+            return False
         if (self.confidence==other.confidence and self.support>other.support):
-            return True
-        if (self.confidence==other.confidence and self.support==other.support and len(self.condSet)<len(self.condSet)):
-            return True
-        return False
+            return False
+        if (self.confidence==other.confidence and self.support==other.support and len(self.condSet)<len(other.condSet)):
+            return False
+        return True
+    def __eq__(self,other):
+        if other==None:
+            return False
+        return self.confidence==other.confidence and self.support==other.support and len(self.condSet)==len(other.condSet)
+    def __hash__(self):
+        return hash(tuple(sorted(self.condSet.items())))+hash(self.classLabel)+hash(len(self.condSet))
 
 
 
@@ -207,6 +248,7 @@ if (__name__=="__main__"):
     minsup = 0.15
     minconf = 0.6
     cars=RG.rule_generator(dataset,minsup,minconf)
+    cars.printRule()
     classifier=M2_classifier(cars,dataset)
     classifier.print()
 
